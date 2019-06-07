@@ -148,19 +148,19 @@ def Upload_file_from_local(filename):
 	printInfo( "Trying local upload...",False,"INFO")
 	uri='http://uplb.115.com/3.0/sampleinitupload.php'
 
-	postdata={"userid":user_id,"filename":filename,"filesize":GetFileSize(filename),"target":target}
+	postdata={"userid":user_id,"filename":os.path.basename(filename),"filesize":GetFileSize(filename),"target":target}
 	r = requests.post(uri,headers=header,cookies=d_cookie,data=postdata)
 	resp=json.loads(r.content) 
 	#print resp
 	req_headers = {'Content-Type': "multipart/form-data; boundary=----7d4a6d158c9"}
-	m = MultipartEncoder(fields=[('name', filename), 
+	m = MultipartEncoder(fields=[('name', os.path.basename(filename)), 
                              ('key', resp['object']),
                              ('policy',resp['policy']),
                              ('OSSAccessKeyId', resp['accessid']),
                              ('success_action_status', '200'),
                              ( 'callback',resp['callback']),
                              ('signature',resp['signature']),
-                             ('file',(filename,open(filename, 'rb'), 'video/mp4'))],
+                             ('file',(os.path.basename(filename),open(filename, 'rb'), 'video/mp4'))],
                      		boundary='----7d4a6d158c9'
                     )
 	r = requests.post(resp['host'],headers=req_headers,data=m)
