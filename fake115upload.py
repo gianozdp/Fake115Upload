@@ -1,17 +1,20 @@
 #coding: utf-8
 __author__ = 'T3rry'
 
+
 import os,sys
 import requests
-from requests_toolbelt.multipart.encoder import MultipartEncoder 
 import json
 import hashlib
 import getopt
 import codecs
+import ctypes
+import platform
+from requests_toolbelt.multipart.encoder import MultipartEncoder 
 #############################################################  Need your cookie
-COOKIESTEXT="your cookie"
+COOKIES="your cookie"
 #############################################################  Need your cookie
-COOKIES={}
+d_cookie={}
 user_id=""
 userkey=""
 target="U_1_0"
@@ -19,6 +22,7 @@ end_string="000000"
 app_ver='11.2.0'
 pickcode=""
 FileCount=0
+std_out_handle=0
 header = { "User-Agent" : 'Mozilla/5.0  115disk/11.2.0'}
 
 def usage():
@@ -31,39 +35,57 @@ Usage:sys.args[0] [option]
 """
 )
 
-def Upload_files_by_sha1_from_links(file):  #link sample : 1.mp4|26984894148|21AEB458C98643D5E5E4374C9D2ABFAAA4C6DA6
-	if GetUserKey()==False:
-		return
-	for l in open(file,'r'):
-		link=l.split('|')
-		filename=link[0]
-		filesize=link[1]
-		fileid=link[2].strip()
-		if(len(fileid)!=40):
-			print 'Error links'
-			return
-		Upload_file_by_sha1(fileid,filesize,filename)
+def set_cmd_text_color(color, handle=std_out_handle):
+    Bool = ctypes.windll.kernel32.SetConsoleTextAttribute(handle, color)
+    return Bool
+
+def resetColor():
+    set_cmd_text_color(0x0c | 0x0a | 0x09,std_out_handle)
+
+def printInfo(info,erorr):
+	global std_out_handle
+	sysstr = platform.system()
+	if erorr==True:
+	  	if(sysstr =="Windows"):
+	  		std_out_handle = ctypes.windll.kernel32.GetStdHandle(-11)
+			set_cmd_text_color(0x0c,std_out_handle)
+			sys.stdout.write('[Fail] '+info+'\n')
+			resetColor()
+		else :
+			print '\033[31m[Fail]'+info
+	else:
+		if(sysstr =="Windows"):
+			std_out_handle = ctypes.windll.kernel32.GetStdHandle(-11)
+			set_cmd_text_color(0x0a,std_out_handle)
+			sys.stdout.write('[SUCC] '+info+'\n')
+			resetColor()
+		else:
+			print '\033[32m[SUCC]'+info
 
 def GetFileSize(file):
 	return os.path.getsize(file)
 
 def GetUserKey():
 	global user_id,userkey
+	if AddCookie(COOKIES) is False: return False
 	try:
-		AddCookie(COOKIESTEXT)
-		r = requests.get("http://proapi.115.com/app/uploadinfo",headers=header,cookies=COOKIES)
+		r = requests.get("http://proapi.115.com/app/uploadinfo",headers=header,cookies=d_cookie)
 		resp=json.loads(r.content) 
 		user_id=str(resp['user_id'])
 		userkey=str(resp['userkey']).upper()
 	except Exception as e:
-		print "Error cookies"
+		print "Explired Cookies"
 		return False
 
 def AddCookie(cook):
-	for line in COOKIESTEXT.split(';'):
-		if line:
+	for line in COOKIES.split(';'):
+		if '=' in line:
 			name,value=line.strip().split('=',1)  
-			COOKIES[name]=value 
+			d_cookie[name]=value 
+
+		elif not d_cookie :
+			print "Wrong Cookies"
+			return False
 
 def Upload_file_by_sha1(fileid,filesize,filename):  #quick
 	fileid=fileid.upper()
@@ -85,15 +107,33 @@ def Upload_file_by_sha1(fileid,filesize,filename):  #quick
 				'fileid':fileid
 			  }
 	r = requests.post(URL, data=postData,headers=header)
-	print(r.text)
+	#print r.content
+	try:
+		if json.loads(r.content)['status']==2 and json.loads(r.content)['statuscode']==0:
+			printInfo(filename,False)
+		else:
+			printInfo(filename+'   '+json.loads(r.content)['statusmsg'],True)
+	except:
+		pass
+def Upload_files_by_sha1_from_links(file):  #link sample : 1.mp4|26984894148|21AEB458C98643D5E5E4374C9D2ABFAAA4C6DA6
+	if GetUserKey() is False: return	
+	for l in open(file,'r'):
+		link=l.split('|')
+		filename=link[0]
+		filesize=link[1]
+		fileid=link[2].strip()
+		if(len(fileid)!=40):
+			print 'Error Links'
+			return
+		Upload_file_by_sha1(fileid,filesize,filename)
 
 def Upload_file_from_local(filename):  #slow
 	uri='http://uplb.115.com/3.0/sampleinitupload.php'
-	AddCookie(COOKIESTEXT)
+	if AddCookie(COOKIES) is False: return
 	postdata={"userid":user_id,"filename":filename,"filesize":GetFileSize(filename),"target":target}
-	r = requests.post(uri,headers=header,cookies=COOKIES,data=postdata)
+	r = requests.post(uri,headers=header,cookies=d_cookie,data=postdata)
 	resp=json.loads(r.content) 
-	print resp
+	#print resp
 	req_headers = {'Content-Type': "multipart/form-data; boundary=----7d4a6d158c9"}
 	m = MultipartEncoder(fields=[('name', filename), 
                              ('key', resp['object']),
@@ -106,26 +146,33 @@ def Upload_file_from_local(filename):  #slow
                      		 boundary='----7d4a6d158c9'
                     )
 	r = requests.post(resp['host'],headers=req_headers,data=m)
-	print r.content
+	#print r.content
+	try:
+		if json.loads(r.content)['state']==True and json.loads(r.content)['code']==0:
+			printInfo(filename,False)
+		else:
+			printInfo(filename,True)
+	except Exception as e:
+		print 'error',e
 	
-def Export_115_sha1_to_file(outfile,cid='0'): #
+def Export_115_sha1_to_file(outfile,cid='0'): # default export all
 	global FileCount
 	uri="http://webapi.115.com/files?aid=1&cid="+cid+"&o=user_ptime&asc=0&offset=0&show_dir=1&limit=5000&code=&scid=&snap=0&natsort=1&source=&format=json"
 	url='http://aps.115.com/natsort/files.php?aid=1&cid='+cid+'&o=file_name&asc=1&offset=0&show_dir=1&limit=5000&code=&scid=&snap=0&natsort=1&source=&format=json&type=&star=&is_share=&suffix=&custom_order=&fc_mix='
-	AddCookie(COOKIESTEXT)
+	if AddCookie(COOKIES) is False: return
 	resp=''
-	r = requests.get(uri,headers=header,cookies=COOKIES)
+	r = requests.get(uri,headers=header,cookies=d_cookie)
 	if(json.loads(r.content).has_key('data')):
 		resp=json.loads(r.content)['data']
 	else:
-		r = requests.get(url,headers=header,cookies=COOKIES)
+		r = requests.get(url,headers=header,cookies=d_cookie)
 		resp=json.loads(r.content)['data']
 	of= codecs.open(outfile,'a+', encoding='utf-8')
 	for d in resp:	
 		if d.has_key('fid'):
 			FileCount+=1
 			try:
-				print d['n'],d['s'],d['sha']
+				printInfo(d['n']+'|'+str(d['s'])+'|'+d['sha'],False)
 				of.write(d['n']+'|'+str(d['s'])+'|'+d['sha']+'\n')
 			except:
 				of.write(d['n']+'|'+str(d['s'])+'|'+d['sha']+'\n')
@@ -147,8 +194,8 @@ if __name__ == '__main__':
 				Upload_files_by_sha1_from_links(v)				
 			elif n in ('-o','--outfile'):
 				Export_115_sha1_to_file(v)
-				print 'Total files count:',FileCount
+				print 'Total count is:',FileCount
 				
 	except getopt.GetoptError:
-		print("argv error,please input")
+		print("Argv error,please input")
 		
