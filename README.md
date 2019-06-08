@@ -3,9 +3,9 @@
 
 # Usage:
 ```
-python Fake115Upload.py 
+$root:python Fake115Upload.py 
 Options:
--l filename: Upload a file form local 
--i filename: Import files form hash lists
--o filename: Export all hash to lists from 115
+-l filename: 从本地上传一个文件，支持秒传和普通上传两种方式。
+-i filename: 从本地文本读取（文件名|文件大小|文件SHA1值）字段并将其导入到115中。
+-o filename: 从115中导出所有文件的（文件名|文件大小|文件SHA1值）字段到本地文本。
 ```
