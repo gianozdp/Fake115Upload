@@ -35,7 +35,6 @@ function FillUidAndKey()
   onload: function(response) {
        if (response.status === 200) {
               uploadinfo = response.response;
-              //alert(uploadinfo.user_id+'|'+uploadinfo.userkey);
            try
 {
            document.getElementById('user_id').value=uploadinfo.user_id;
