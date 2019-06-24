@@ -1,9 +1,9 @@
 // ==UserScript==
 // @author       T3rry
-// @name         115一键转存文件插件（无限制）
+// @name         Fake115Upload 一键分享转存插件（无限制）
 // @namespace    https://github.com/T3rry7f/Fake115Upload
-// @version      1.02
-// @description  115 一键提取一键转存
+// @version      1.05
+// @description  115文件一键提取 一键转存
 // @match        https://itunnel.top/*
 // @match        https://115.com/*
 // @grant        GM_xmlhttpRequest
@@ -18,10 +18,10 @@
     'use strict';
 
    var str=document.URL;
-//  if(str == "https://itunnel.top/115upload")
-//  {
-//      FillUidAndKey();
-//  }
+  if(str == "https://itunnel.top/115upload")
+  {
+      FillUidAndKey();
+  }
 
  waitForKeyElements("div.file-opr", AddShareSHA1Node);
  waitForKeyElements("div.dialog-bottom", AddDownloadSha1Btn);
@@ -35,6 +35,7 @@ function FillUidAndKey()
   onload: function(response) {
        if (response.status === 200) {
               uploadinfo = response.response;
+              //alert(uploadinfo.user_id+'|'+uploadinfo.userkey);
            try
 {
            document.getElementById('user_id').value=uploadinfo.user_id;
@@ -65,9 +66,6 @@ function test(info)
 }
     }
 
-function GetUserKeyParams(links){
-
-}
 function DownFileBySha1(links)
     {
         console.log(links);
@@ -87,12 +85,11 @@ function DownFileBySha1(links)
                   if (response.status === 200) {
                       uploadinfo = response.response;
                     //  alert(uploadinfo.user_id+'|'+uploadinfo.userkey);
-                     // return (uploadinfo.user_id+'|'+uploadinfo.userkey);
                       try
                       {
 
                           var requestParams=encodeURI("links="+links+"&uid="+uploadinfo.user_id+"&userkey="+uploadinfo.userkey+"&cid=0");
-         
+
 
                           GM_xmlhttpRequest({
                               method: "GET",
@@ -116,7 +113,6 @@ function DownFileBySha1(links)
                                   }
                               }
                           });
-                         // return ret;
                       }
                       catch(err)
                       {
@@ -128,9 +124,6 @@ function DownFileBySha1(links)
                   }
               }
           });
-
-
-
     }
 
 
@@ -141,16 +134,14 @@ function GetSha1LinkByliNode(liNode)
       {
           var fid  = liNode.getAttribute('cate_id');
           return false;
-         // console.log(fid);
        }
      else
      {
          var filename  = liNode.getAttribute('title');
          var filesize =liNode.getAttribute('file_size');
           var sha1 =liNode.getAttribute('sha1');
-         return (filename+'|'+filesize+'|'+sha1);
-
           console.log(filename+'|'+filesize+'|'+sha1);
+          return (filename+'|'+filesize+'|'+sha1);
      }
     }
 function AddDownloadSha1Btn(jNode)
@@ -177,7 +168,6 @@ function AddShareSHA1Node (jNode)
     {
         var parentNode=jNode[0].parentNode;
         var sha1Link=GetSha1LinkByliNode(parentNode);
-        console.log(parentNode);
         var aclass=document.createElement('a');
         aclass.addEventListener('click', function (e) {
            test(sha1Link);
